@@ -1,0 +1,38 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.4\n"
+"Last-Translator: eSirPlayground <https://www.youtube.com/c/esirplayground>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Language: zh_Hans\n"
+
+#: applications\luci-app-poweroff\luasrc\controller\poweroff.lua:4
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:8
+msgid "PowerOff"
+msgstr "关机"
+
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:11
+msgid "Shut down your router"
+msgstr "关闭路由器"
+
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:51
+msgid "Perform PowerOff"
+msgstr "执行关机"
+
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:14
+msgid "Warning: There are unsaved changes that will get lost on shutting down!"
+msgstr "警告：系统有尚未保存的配置，关机将会丢失！"
+
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:40
+msgid "Waiting for device..."
+msgstr "设备等待中..."
+
+#: applications\luci-app-poweroff\luasrc\view\poweroff.htm:55
+msgid "Router is shutting down..."
+msgstr "正在关闭路由器..."

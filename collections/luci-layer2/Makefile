@@ -13,7 +13,7 @@ LUCI_TITLE:=LuCI interface for layer-2 devices, using Uhttpd (layer-2)
 LUCI_DESCRIPTION:=Layer-2 OpenWrt set including admin support and the default Bootstrap theme
 LUCI_DEPENDS:= \
 	+luci-mod-admin-full \
-	+luci-theme-bootstrap \
+	+luci-theme-argon \
 	+rpcd-mod-rrdns \
 	+uhttpd \
 	+uhttpd-mod-ubus

@@ -17,7 +17,7 @@ LUCI_DEPENDS:= \
 	+luci-app-package-manager \
 	+luci-mod-admin-full \
 	+luci-proto-ppp \
-	+luci-theme-bootstrap \
+	+luci-theme-argon \
 	+nginx \
 	+nginx-mod-luci \
 	+rpcd-mod-rrdns

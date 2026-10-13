@@ -33,44 +33,114 @@ return L.view.extend({
 		}
 
 		try {
-			// Clean up the output - remove extra newlines and trim
-			const cleaned = output.trim().replace(/\[\s*\n\s*\]/g, '[]');
-			const json = JSON.parse(cleaned);
+			const json = JSON.parse(output.trim());
 			
-			// Handle different JSON structures
+			let userList = [];
 			if (Array.isArray(json)) {
-				// Handle empty array like "[\n]"
-				if (json.length === 0) {
-					return users;
-				}
-				// If it's an array of users directly
-				return json.map(entry => this.normalizeUser(entry));
-			} else if (json && json.users && Array.isArray(json.users)) {
-				// If it's wrapped in a "users" property
-				return json.users.map(entry => this.normalizeUser(entry));
+				userList = json;
+			} else if (json && Array.isArray(json.users)) {
+				userList = json.users;
+			} else if (typeof json === 'object' && json !== null) {
+				userList = Object.values(json);
 			}
-			
-			return users;
+
+			return userList.map(entry => this.normalizeUser(entry));
 		} catch (e) {
-			console.error('Failed to parse JSON:', e.message);
+			console.error('Failed to parse occtl JSON output:', e.message, output);
 			return users;
 		}
 	},
 
 	normalizeUser(entry) {
+		if (!entry || typeof entry !== 'object') return {};
+		const getProp = (obj, ...keys) => {
+			for (const key of keys) {
+				if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+					return obj[key];
+				}
+			}
+			const objKeys = Object.keys(obj);
+			for (const targetKey of keys) {
+				const normalizedTarget = targetKey.toLowerCase().replace(/[-_ ]/g, '');
+				const foundKey = objKeys.find(k => k.toLowerCase().replace(/[-_ ]/g, '') === normalizedTarget);
+				if (foundKey && obj[foundKey] !== undefined && obj[foundKey] !== null && obj[foundKey] !== '') {
+					return obj[foundKey];
+				}
+			}
+			return null;
+		};
+
+		// Get user ID
+		const id = getProp(entry, 'ID', 'id', 'Id') ?? '-';
+
+		// Get User name info
+		const rawUser = getProp(entry, 'Username', 'username', 'user', 'User', 'CN', 'cn', 'cert-user', 'tls-auth');
+		const displayUser = rawUser ? String(rawUser) : (id !== '-' ? `(Cert User #${id})` : _('Certificate User'));
+
+		// Get IP info
+		const vpn_ip = getProp(entry, 'IPv4', 'vpn-ipv4', 'vpn_ip', 'vpn-ip', 'VPN IPv4', 'VPN IP') || '-';
+		const vpn_ip6 = getProp(entry, 'IPv6', 'vpn-ipv6', 'vpn_ip6', 'vpn-ip6', 'VPN IPv6') || '-';
+		const remote_ip = getProp(entry, 'Remote IP', 'remote-ip', 'ip', 'IP', 'RemoteIP', 'remote_ip') || '-';
+
+		// Get Device info
+		const device = getProp(entry, 'Device', 'device', 'dev', 'Interface', 'interface') || '-';
+
+		// Get time infor
+		const time = getProp(entry, 'Connected at', 'connected-at', 'Last connected at', 'connected_at', 'time', 'Time', '_time') || '-';
+
+		let rawCipher = getProp(
+			entry, 
+			'Cipher', 'cipher', 'Ciphers', 'Cipher suite', 'cipher-suite', 'cipher_suite',
+			'TLS', 'DTLS', 'DTLS cipher', 'tls-cipher', 'dtls-cipher', 'tls_cipher', 'dtls_cipher'
+		);
+
+		let cipherStr = '';
+		if (typeof rawCipher === 'object' && rawCipher !== null) {
+			const tls = rawCipher.tls || rawCipher.TLS || '';
+			const dtls = rawCipher.dtls || rawCipher.DTLS || '';
+			cipherStr = dtls || tls || JSON.stringify(rawCipher);
+		} else if (rawCipher) {
+			cipherStr = String(rawCipher);
+		} else {
+			const dtls = getProp(entry, 'DTLS', 'dtls', 'dtls-cipher');
+			const tls = getProp(entry, 'TLS', 'tls', 'tls-cipher');
+			cipherStr = dtls || tls || '-';
+		}
+
+		if (cipherStr && cipherStr !== '-') {
+			const matches = cipherStr.match(/\(([^)]+)\)/g);
+			if (matches && matches.length > 0) {
+				const lastMatch = matches[matches.length - 1];
+				cipherStr = lastMatch.replace(/[()]/g, '').trim();
+			} else {
+				const parts = cipherStr.split(/[-/]/);
+				if (parts.length > 2 && /GCM|CBC|POLY1305|AES|CHACHA/i.test(parts[parts.length - 1])) {
+					cipherStr = parts.slice(-2).join('-');
+				}
+			}
+		}
+
+		// Get State & Group info
+		const status = getProp(entry, 'State') || 'active';
+		const group = getProp(entry, 'Groupname') || 'default';
+
+		// Get tx and rx
+		const tx = getProp(entry, '_TX') || 'n/a';
+		const rx = getProp(entry, '_RX') || 'n/a';
+
 		return {
-			id: entry.id,
-			user: entry?.username || entry?.user,
-			group: entry?.group,
-			vpn_ip: entry['vpn-ipv4'] || entry.vpn_ip,
-			vpn_ip6: entry['vpn-ipv6'] || entry.vpn_ip6,
-			ip: entry?.ip,
-			device: entry?.device,
-			time: entry?.time || entry['connected-at'],
-			cipher: entry?.cipher,
-			status: entry?.status,
-			tx: entry?._TX || entry?.TX || entry?.tx,
-			rx: entry?._RX || entry?.RX || entry?.rx
+			id: id,
+			user: displayUser,
+			group: group,
+			vpn_ip: vpn_ip,
+			vpn_ip6: vpn_ip6,
+			ip: remote_ip,
+			device: device,
+			time: time,
+			cipher: cipherStr || '-',
+			status: status,
+			tx: tx,
+			rx: rx
 		};
 	},
 
@@ -153,8 +223,8 @@ return L.view.extend({
 			if (users.length === 0) {
 				table.appendChild(
 					E('div', { 'class': 'tr placeholder' }, [
-						E('div', { 'class': 'td', 'colspan': 13 },
-							E('em', _('Collecting data...')))
+						E('div', { 'class': 'td', 'style': 'grid-column: 1 / -1; text-align: center;' },
+							E('em', _('There are no active users.')))
 					])
 				);
 			} else {
